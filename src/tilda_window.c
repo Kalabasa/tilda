@@ -837,15 +837,9 @@ static void page_reordered_cb (GtkNotebook  *notebook,
     /* We use the VteTerminal pointer relative to the current tab's child widget to find the correct
      * tilda_term structure in the list of terminals. The assumption here is, that the VteTerminal
      * is either the first or second widget in the container (depending on the location of the scrollbar) */
-    GList *page_children = gtk_container_get_children (GTK_CONTAINER(child));
-    if GTK_IS_SCROLLBAR(page_children->data) {
-        page_children = page_children->next;
-    }
-    GtkWidget *vteTerminal = GTK_WIDGET (page_children->data);
-
     for (GList *item = terms; item != NULL; item = item->next) {
         tilda_term *current_term = item->data;
-        if (current_term->vte_term == vteTerminal) {
+        if (current_term->hbox == child) {
             terms = g_list_remove (terms, current_term);
             terms = g_list_insert (terms, current_term, page_num);
             tw->terms = terms;
