@@ -826,6 +826,34 @@ static tilda_search *tilda_search_box_init(tilda_window *tw)
     return search;
 }
 
+/* Detect changes in GtkNotebook tab order and update the tw->terms list to reflect such changes. */
+static void page_reordered_cb (GtkNotebook  *notebook,
+                        GtkWidget    *child,
+                        guint         page_num,
+                        tilda_window *tw) {
+    DEBUG_FUNCTION ("page_reordered_cb");
+    GList *terms = tw->terms;
+
+    /* We use the VteTerminal pointer relative to the current tab's child widget to find the correct
+     * tilda_term structure in the list of terminals. The assumption here is, that the VteTerminal
+     * is either the first or second widget in the container (depending on the location of the scrollbar) */
+    GList *page_children = gtk_container_get_children (GTK_CONTAINER(child));
+    if GTK_IS_SCROLLBAR(page_children->data) {
+        page_children = page_children->next;
+    }
+    GtkWidget *vteTerminal = GTK_WIDGET (page_children->data);
+
+    for (GList *item = terms; item != NULL; item = item->next) {
+        tilda_term *current_term = item->data;
+        if (current_term->vte_term == vteTerminal) {
+            terms = g_list_remove (terms, current_term);
+            terms = g_list_insert (terms, current_term, page_num);
+            tw->terms = terms;
+            break;
+        }
+    }
+}
+
 gboolean tilda_window_init (const gchar *config_file, const gint instance, tilda_window *tw)
 {
     DEBUG_FUNCTION ("tilda_window_init");
@@ -965,6 +993,10 @@ gboolean tilda_window_init (const gchar *config_file, const gint instance, tilda
     g_signal_connect (G_OBJECT(tw->window), "focus-out-event", G_CALLBACK (focus_out_event_cb), tw);
     g_signal_connect (G_OBJECT(tw->window), "enter-notify-event", G_CALLBACK (mouse_enter), tw);
     g_signal_connect (G_OBJECT(tw->window), "leave-notify-event", G_CALLBACK (mouse_leave), tw);
+
+    /* We need this signal to detect changes in the order of tabs so that we can keep the order
+     * of tilda_terms in the tw->terms structure in sync with the order of tabs. */
+    g_signal_connect (G_OBJECT(tw->notebook), "page-reordered", G_CALLBACK (page_reordered_cb), tw);
 
     /* Setup the tilda window. The tilda window consists of a toplevel window that contains the following widgets:
      *   * The main_box holds a GtkNotebook with all the terminal tabs
