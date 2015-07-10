@@ -28,7 +28,9 @@ typedef struct tilda_window_ tilda_window;
 
 enum tilda_animation_state {
     STATE_UP,
-    STATE_DOWN
+    STATE_DOWN,
+    STATE_GOING_UP,
+    STATE_GOING_DOWN
 };
 
 struct tilda_window_
